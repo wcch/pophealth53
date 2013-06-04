@@ -10,6 +10,7 @@ PopHealth::Application.routes.draw do
   post "admin/update_npi"
   get "admin/patients"
   put "admin/upload_patients"
+  put "admin/upload_csv", controller: 'csv', :action=> 'csv_upload'
   delete "admin/remove_patients"
   delete "admin/remove_caches"
 
