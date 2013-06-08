@@ -16,7 +16,7 @@ class CsvController < ApplicationController
 	    Zip::ZipFile.open(temp_file.path) do |zipfile|
 	      zipfile.each do |file|
 		csv = zipfile.read(file)
-
+		
 		arecord={}
 		CSV.parse(csv) do |row|
 		  religious_affiliation={}
@@ -84,8 +84,10 @@ class CsvController < ApplicationController
 		    record.results << ResultValue.new(results)
 		    record.save!
 		  end
-
-
+		@record=Record.where(medical_record_number: row[7]).first
+                 QME::QualityReport.update_patient_results(@record.medical_record_number)
+          Atna.log(current_user.username, :phi_import)
+          Log.create(:username => current_user.username, :event => 'patient record imported', :medical_record_number => @record.medical_record_number)
 		end #end of csv parse row
 	    end #end of zip file each
 	end #end of zip file open each
