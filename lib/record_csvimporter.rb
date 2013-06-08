@@ -6,15 +6,12 @@ class RecordImporter
     @providers_predefined = providers_predefined
   end
  
-  def self.import(xml_data, provider_map = {})
+  def self.import(data, provider_map = {})
 
-    
-
-    record = Record.update_or_create(patient_data)
-    record.provider_performances = providers
-    record.save
-    
-    {status: 'success', message: 'patient imported', status_code: 201, record: record}
+  
+record=Record.new
+record.first='h'
+record.save
     
   end
 

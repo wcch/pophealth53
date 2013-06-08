@@ -66,27 +66,31 @@ class CsvController < ApplicationController
 		      when 36..37
 			results[k]=row[i]
 			
-		    end
-		  end
+		    end #end of case
+
+		  end #end of each with index
 		  arecord[:religious_affiliation]=religious_affiliation unless religious_affiliation.empty?
 		  arecord[:race]=race unless race.empty?
 		  arecord[:ethnicity]=ethnicity unless ethnicity.empty?
 		  arecord[:marital_status]=marital_status unless marital_status.empty?
-		  #arecord.encounters << Encounter.new(encounters)
-		  record=Record.new arecord
-		  record.encounters << Encounter.new(encounters)
-		  record.results << ResultValue.new(results)
-		  #Record.create! row.to_hash
-		  @record=record
-		  Record.update_or_create(record)
-QME::QualityReport.update_patient_results(@record.medical_record_number)
-          Atna.log(current_user.username, :phi_import)
-          Log.create(:username => current_user.username, :event => 'patient record imported', :medical_record_number => @record.medical_record_number)
-		end
-	    end
-	end
+# if record is exist, then update
+		  existing=Record.where(medical_record_number: row[7]).first
+		  if existing
+		    existing.encounters << Encounter.new(encounters)
+		    existing.results << ResultValue.new(results)
+		  else
+		    record=Record.new arecord
+		    record.encounters << Encounter.new(encounters)
+		    record.results << ResultValue.new(results)
+		    record.save!
+		  end
+
+
+		end #end of csv parse row
+	    end #end of zip file each
+	end #end of zip file open each
         redirect_to controller: 'admin', action: 'patients'
-  end
+  end #end of method definition
 
   def validate_authorization!
     authorize! :admin, :users
