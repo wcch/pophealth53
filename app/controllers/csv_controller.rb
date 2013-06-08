@@ -67,20 +67,21 @@ class CsvController < ApplicationController
 			results[k]=row[i]
 			
 		    end
-		    #race[k]=row[i] if i>=9 && i<=11
-		    #ethnicity[k]=row[i] if i>=12 && i<=14
-		    #encounters[k]=row[i] if i>=21 && i<=26
-		    #arecord[k]=row[i] if i<9
 		  end
 		  arecord[:religious_affiliation]=religious_affiliation unless religious_affiliation.empty?
 		  arecord[:race]=race unless race.empty?
 		  arecord[:ethnicity]=ethnicity unless ethnicity.empty?
 		  arecord[:marital_status]=marital_status unless marital_status.empty?
 		  #arecord.encounters << Encounter.new(encounters)
-		  record=Record.create! arecord
+		  record=Record.new arecord
 		  record.encounters << Encounter.new(encounters)
 		  record.results << ResultValue.new(results)
 		  #Record.create! row.to_hash
+		  @record=record
+		  Record.update_or_create(record)
+QME::QualityReport.update_patient_results(@record.medical_record_number)
+          Atna.log(current_user.username, :phi_import)
+          Log.create(:username => current_user.username, :event => 'patient record imported', :medical_record_number => @record.medical_record_number)
 		end
 	    end
 	end
