@@ -16,7 +16,7 @@ class CsvController < ApplicationController
 	    Zip::ZipFile.open(temp_file.path) do |zipfile|
 	      zipfile.each do |file|
 		csv = zipfile.read(file)
-
+		
 		arecord={}
 		CSV.parse(csv) do |row|
 		  religious_affiliation={}
@@ -45,47 +45,53 @@ class CsvController < ApplicationController
 		      when 18..19
 			encounters[k]=row[i]
 		      when 20..22
-			arecord[k]=HL7Helper.timestamp_to_integer(row[i])
+			encounters[k]=HL7Helper.timestamp_to_integer(row[i])
 		      when 23..29
 			encounters[k]=row[i]
 		      when 30
 			codes={}
 			codesystem=row[i].split(":")
 			codes[codesystem[0]] ||=[]
-			codesystem[1].split.each do |code|
-			  codes['CPT'] << code
-			end
+			codes[codesystem[0]] << codesystem[1]
 			encounters[k]=codes
 		      when 32..34
 			results[k]=row[i]
 		      when 35
 			codes={}
 			codesystem=row[i].split(":")
-			codes[codesystem[0]] ||=codesystem[1]
+			codes[codesystem[0]] ||=[]
+			codes[codesystem[0]] << codesystem[1]
 			results[k]=codes
 		      when 36..37
 			results[k]=row[i]
 			
-		    end
-		    #race[k]=row[i] if i>=9 && i<=11
-		    #ethnicity[k]=row[i] if i>=12 && i<=14
-		    #encounters[k]=row[i] if i>=21 && i<=26
-		    #arecord[k]=row[i] if i<9
-		  end
+		    end #end of case
+
+		  end #end of each with index
 		  arecord[:religious_affiliation]=religious_affiliation unless religious_affiliation.empty?
 		  arecord[:race]=race unless race.empty?
 		  arecord[:ethnicity]=ethnicity unless ethnicity.empty?
 		  arecord[:marital_status]=marital_status unless marital_status.empty?
-		  #arecord.encounters << Encounter.new(encounters)
-		  record=Record.create! arecord
-		  record.encounters << Encounter.new(encounters)
-		  record.results << ResultValue.new(results)
-		  #Record.create! row.to_hash
-		end
-	    end
-	end
+# if record is exist, then update
+		  existing=Record.where(medical_record_number: row[7]).first
+		  if existing
+		    existing.encounters << Encounter.new(encounters)
+		    existing.results << ResultValue.new(results)
+		  else
+		    record=Record.new arecord
+		    record.encounters << Encounter.new(encounters)
+		    record.results << ResultValue.new(results)
+		    record.save!
+		  end
+		@record=Record.where(medical_record_number: row[7]).first
+                 QME::QualityReport.update_patient_results(@record.medical_record_number)
+          Atna.log(current_user.username, :phi_import)
+          Log.create(:username => current_user.username, :event => 'patient record imported', :medical_record_number => @record.medical_record_number)
+		end #end of csv parse row
+	    end #end of zip file each
+	end #end of zip file open each
         redirect_to controller: 'admin', action: 'patients'
-  end
+  end #end of method definition
 
   def validate_authorization!
     authorize! :admin, :users
