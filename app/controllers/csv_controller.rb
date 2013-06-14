@@ -7,7 +7,7 @@ class CsvController < ApplicationController
 
   def csv_upload
 	  file = params[:file]
-	  columnmapping=['title','first', 'last', 'gender', 'birthdate', 'deathdate','effective_time', 'medical_record_number', 'expired', 'languages', 'code','code_set','code', 'code_set', 'code', 'code_set', 'code', 'code_set', 'description', 'specifics', 'time', 'start_time', 'end_time', 'status_code', 'free_text', 'mood_code', 'negationInd', 'oid', 'negationReason', 'reason', 'codes', 'admittype', 'description', 'referenceRange', 'interpretation', 'codes', 'scalar', 'units']
+	  
 	  #columnmapping=['title','first', 'last', 'gender']
 	  temp_file = Tempfile.new("patient_upload")
 
@@ -16,15 +16,35 @@ class CsvController < ApplicationController
 	    Zip::ZipFile.open(temp_file.path) do |zipfile|
 	      zipfile.each do |file|
 		csv = zipfile.read(file)
-		
-		arecord={}
+		apatient=[]		
 		CSV.parse(csv) do |row|
+		  apatient << row if apatient.empty?
+		  if apatient.any? && apatient.first[7]==row[7]
+		    apatient << row
+		  else
+		    csvimport(apatient)
+		    apatient = []
+		    apatient << row
+		  end
+		  csvimport(apatient)
+		end #end of csv parse row
+	    end #end of zip file each
+	end #end of zip file open each
+        redirect_to controller: 'admin', action: 'patients'
+  end #end of method definition
+
+  def csvimport(data)
+	columnmapping=['title','first', 'last', 'gender', 'birthdate', 'deathdate','effective_time', 'medical_record_number', 'expired', 'languages', 'code','code_set','code', 'code_set', 'code', 'code_set', 'code', 'code_set', 'description', 'specifics', 'time', 'start_time', 'end_time', 'status_code', 'free_text', 'mood_code', 'negationInd', 'oid', 'negationReason', 'reason', 'codes', 'admittype', 'description', 'referenceRange', 'interpretation', 'codes', 'scalar', 'units']
+  #mrn ||= row[7]
+		  #row=data
+		data.each do |row|
 		  religious_affiliation={}
 		  race={}
 		  ethnicity={}
 		  marital_status={}
 		  encounters={}
 		  results={}
+		  arecord={}
 		  columnmapping.each_with_index do |k, i|
 		    next if row[i].nil?
 		    case i
@@ -51,10 +71,7 @@ class CsvController < ApplicationController
 		      when 30
 			codes={}
 			codesystem=row[i].split(":")
-			codes[codesystem[0]] ||=[]
-			codesystem[1].split.each do |code|
-			  codes['CPT'] << code
-			end
+			codes[codesystem[0]] ||=codesystem[1]
 			encounters[k]=codes
 		      when 32..34
 			results[k]=row[i]
@@ -88,11 +105,8 @@ class CsvController < ApplicationController
                  QME::QualityReport.update_patient_results(@record.medical_record_number)
           Atna.log(current_user.username, :phi_import)
           Log.create(:username => current_user.username, :event => 'patient record imported', :medical_record_number => @record.medical_record_number)
-		end #end of csv parse row
-	    end #end of zip file each
-	end #end of zip file open each
-        redirect_to controller: 'admin', action: 'patients'
-  end #end of method definition
+    end #end of row each
+  end
 
   def validate_authorization!
     authorize! :admin, :users
