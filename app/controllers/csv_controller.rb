@@ -47,17 +47,16 @@ class CsvController < ApplicationController
 
     record=Record.new
     get_demographics(record, data)
-    get_encounters(record, data)
+    get_entris(record, data)
     #get_results(record, data)
     record=Record.update_or_create(record)
-    #record.save
+    record.save
    
   end
 
   def get_demographics(record, data)
     row=data.first
 
-    columnmapping=['title','first', 'last', 'gender', 'birthdate', 'deathdate','effective_time', 'medical_record_number', 'expired', 'languages', 'code','code_set','code', 'code_set', 'code', 'code_set', 'code', 'code_set', 'description', 'specifics', 'time', 'start_time', 'end_time', 'status_code', 'free_text', 'mood_code', 'negationInd', 'oid', 'negationReason', 'reason', 'codes', 'admittype', 'description', 'referenceRange', 'interpretation', 'codes', 'scalar', 'units']
     columns=[:title, :first, :last, :gender, :birthdate, :deathdate, :effective_time, 
 :medical_record_number, :exired, :languages, :code, :code_set, :code, :code_set, 
 :code, :code_set, :code, :code_set]
@@ -69,9 +68,9 @@ class CsvController < ApplicationController
     next if row[i].nil?
     case i
     when 0..3, 7..9
-      record.update_attribute(k, row[i])
+      record.assign_attributes(k=>row[i])
     when 4..6
-      record.update_attribute(k, HL7Helper.timestamp_to_integer(row[i]))
+      record.assign_attributes(k => HL7Helper.timestamp_to_integer(row[i]))
     when 10..11
       religious_affiliation[k]=row[i]
     when 12..13
@@ -90,7 +89,7 @@ class CsvController < ApplicationController
 
   end
 
-  def get_encounters(record, data)
+  def get_entris(record, data)
     encounters={}
     results={}
     columns=[:title, :first, :last, :gender, :birthdate, :deathdate,
